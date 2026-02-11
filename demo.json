@@ -1,0 +1,8 @@
+{
+    "scripts": {
+      "dev": "node src/server.js",
+      "migrate": "prisma migrate dev",
+      "studio": "prisma studio"
+    }
+  }
+  

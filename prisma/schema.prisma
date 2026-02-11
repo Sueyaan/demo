@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String       @id @default(cuid())
+  name            String
+  email           String       @unique
+  phone           String?
+  role            Role         @default(employee)
+  passwordHash    String
+  status          String       @default("active")
+  createdAt       DateTime     @default(now())
+  attendances     Attendance[]
+  tasksAssignedBy Task[]       @relation("assignedBy")
+  tasksAssignedTo Task[]       @relation("assignedTo")
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  status       TaskStatus @default(assigned)
+  dueAt        DateTime?
+  createdAt    DateTime   @default(now())
+  assignedToId String
+  assignedById String
+  assignedBy   User       @relation("assignedBy", fields: [assignedById], references: [id])
+  assignedTo   User       @relation("assignedTo", fields: [assignedToId], references: [id])
+}
+
+model Attendance {
+  id              String    @id @default(cuid())
+  userId          String
+  startTime       DateTime
+  endTime         DateTime?
+  durationMinutes Int?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  admin
+  employee
+}
+
+enum TaskStatus {
+  assigned
+  in_progress
+  done
+}
