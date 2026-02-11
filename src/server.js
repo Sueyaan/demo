@@ -10,7 +10,25 @@ const taskRoutes = require("./routes/tasks");
 
 const app = express();
 app.use(helmet());
-app.use(cors());
+
+const allowlist = [
+  process.env.FRONTEND_URL,
+  "http:localhost:3000",
+
+].filter(Boolean);
+
+app.use(cors({
+  origin:(origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowlist.includes(origin)) return cb(null,true);
+    return cb(new Error("CORS blocked: " + origin));
+  },
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"], 
+
+
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan("dev"));
@@ -20,6 +38,9 @@ app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/tasks", taskRoutes);
 app.use("/attendance", require("./routes/attendance"));
+
+
+
 
 app.use((err, req, res, next) => {
   console.error("ERROR:", err);
@@ -31,8 +52,6 @@ app.use((err, req, res, next) => {
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
-
-
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log("API running on port " + port));
