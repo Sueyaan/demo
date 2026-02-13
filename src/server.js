@@ -16,21 +16,19 @@ const app = express();
 app.use(helmet());
 
 const allowlist = [
-  process.env.FRONTEND_URL, 
-  "https://v0-demobk.vercel.app",
-  "http://localhost:3000"
-
+  process.env.FRONTEND_URL,
+  "http://localhost:3000",
 ].filter(Boolean);
 
 app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // curl/postman
-    if (allowlist.includes(origin)) return cb(null, true);
-    return cb(new Error("CORS blocked: " + origin));
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowlist.includes(origin)) return callback(null, true);
+    return callback(new Error("CORS blocked: " + origin));
   },
   credentials: true,
-  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
 }));
 
 
