@@ -46,7 +46,8 @@ model Attendance {
 }
 
 enum Role {
-  admin
+  owner
+  manager
   employee
 }
 
