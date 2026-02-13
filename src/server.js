@@ -38,7 +38,6 @@ app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/tasks", taskRoutes);
 app.use("/attendance", require("./routes/attendance"));
-app.use("/debug", require("./routes/debug"));
 
 
 
