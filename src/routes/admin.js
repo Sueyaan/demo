@@ -6,6 +6,7 @@ const { requireAuth, requireRole } = require("../middleware/auth");
 
 router.use(requireAuth);
 
+// owner: write
 router.post("/employees", requireRole("owner"), async (req, res, next) => {
   try {
     const schema = z.object({
@@ -20,8 +21,7 @@ router.post("/employees", requireRole("owner"), async (req, res, next) => {
     const rounds = parseInt(process.env.BCRYPT_ROUNDS || "12", 10);
     const passwordHash = await bcrypt.hash(body.password, rounds);
 
-
-    const create = await prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         name: body.name,
         email: body.email,
@@ -30,27 +30,27 @@ router.post("/employees", requireRole("owner"), async (req, res, next) => {
         passwordHash,
         status: "active",
       },
-      select: { id:true, name: true, email: true, role: true, createAt: true },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 
-    res.status(201).json(created);
+    return res.status(201).json(created);
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 
+// owner + manager: read
 router.get("/employees", requireRole("owner", "manager"), async (req, res, next) => {
   try {
-
     const employees = await prisma.user.findMany({
       where: { role: "employee" },
       select: { id: true, name: true, email: true, phone: true, status: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ employees });
+    return res.json({ employees });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 
