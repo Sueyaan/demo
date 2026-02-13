@@ -2,10 +2,10 @@ const { head } = require("../routes/auth");
 const { verifyAccessToken } = require("../utils/jwt");
 
 function requireAuth(req, res, next) {
-    const header = req.header.authorization || "";
+    const header = req.headers.authorization || "";
     const [type, token] = header.split(" ");
 
-    if (type !== "Bearer" || !token);{
+    if (type !== "Bearer" || !token) {
         return res.status(401).json({ error: "unauthorized" });
 
     }
