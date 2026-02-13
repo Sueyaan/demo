@@ -6,6 +6,19 @@ const { requireAuth, requireRole } = require("../middleware/auth");
 
 router.use(requireAuth);
 
+router.get("/stats", requireRole("owner", "manager"), async (req, res, next) => {
+    try {
+        const total = await prisma.task.count();
+        const done = await prisma.task.count({ where: { status: "done" } });
+        const inProgress = await prisma.task.count({ where: { status: "in_progress" } });
+        const assigned = await prisma.task.count({ where: { status: "assigned" } });
+
+        return res.json({ total, done, inProgress, assigned });
+    } catch (err) {
+        return next(err);
+    }
+});
+
 
 router.get("/me", requireRole("employee"), async (req, res, next) => {
   try {
@@ -104,20 +117,6 @@ router.post("/", requireRole("owner"), async (req, res, next) => {
   } catch (err) {
     return next(err);
   }
-});
-
-
-router.get("/stats", requireRole("owner", "manager"), async (req, res, next) => {
-    try {
-        const total = await prisma.task.count();
-        const done = await prisma.task.count({ where: { status: "done" } });
-        const inProgress = await prisma.task.count({ where: { status: "in_progress" } });
-        const assigned = await prisma.task.count({ where: { status: "assigned" } });
-
-        return res.json({ total, done, inProgress, assigned });
-    } catch (err) {
-        return next(err);
-    }
 });
 
 
