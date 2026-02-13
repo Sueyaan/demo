@@ -1,4 +1,8 @@
 require("dotenv").config();
+console.log("JWT_ACCESS_SECRET loaded:", !!process.env.JWT_ACCESS_SECRET);
+console.log("JWT_ACCESS_TTL:", process.env.JWT_ACCESS_TTL);
+console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -11,23 +15,19 @@ const taskRoutes = require("./routes/tasks");
 const app = express();
 app.use(helmet());
 
-const allowlist = [
-  process.env.FRONTEND_URL,
-  "http:localhost:3000",
-
-].filter(Boolean);
+const allowlist = [process.env.FRONTEND_URL, "http://localhost:3000"].filter(Boolean);
 
 app.use(cors({
-  origin:(origin, cb) => {
-    if (!origin) return cb(null, true);
-    if (allowlist.includes(origin)) return cb(null,true);
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // curl/postman
+    if (allowlist.includes(origin)) return cb(null, true);
     return cb(new Error("CORS blocked: " + origin));
   },
+  credentials: true,
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"], 
-
-
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
