@@ -107,6 +107,24 @@ router.post("/", requireRole("owner"), async (req, res, next) => {
 });
 
 
+router.get("/stats", requireRole("owner", "manager"), async (req, res, next) => {
+    try {
+        const total = await prisma.task.count();
+        const done = await prisma.task.count({ where: { status: "done" } });
+        const inProgress = await prisma.task.count({ where: { status: "in_progress" } });
+        const assigned = await prisma.task.count({ where: { status: "assigned" } });
+
+        return res.json({ total, done, inProgress, assigned });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+
+
+
+
+
 router.patch("/:id/status", requireRole("owner", "employee"), async (req, res, next) => {
   try {
     const paramsSchema = z.object({ id: z.string().min(1) });
