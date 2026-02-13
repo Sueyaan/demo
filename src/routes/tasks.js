@@ -68,6 +68,25 @@ router.get("/", requireRole("owner", "manager"), async (req, res, next) => {
   }
 });
 
+
+router.get("/by-employee/:employeeId", requireRole("owner", "manager"), async (req, res, next) => {
+  try {
+    const { employeeId } = req.params;
+    const tasks = await prisma.task.findMany({
+      where: { assignedToId: employeeId },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.json({ tasks });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+
+
+
+
+
 router.post("/", requireRole("owner"), async (req, res, next) => {
   try {
     const schema = z.object({
