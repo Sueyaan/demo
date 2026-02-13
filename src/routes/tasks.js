@@ -107,7 +107,7 @@ router.post("/", requireRole("owner"), async (req, res, next) => {
 });
 
 
-router.patch("/:id/status", async (req, res, next) => {
+router.patch("/:id/status", requireRole("owner", "employee"), async (req, res, next) => {
   try {
     const paramsSchema = z.object({ id: z.string().min(1) });
     const bodySchema = z.object({
