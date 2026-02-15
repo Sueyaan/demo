@@ -1,7 +1,4 @@
 require("dotenv").config();
-console.log("JWT_ACCESS_SECRET loaded:", !!process.env.JWT_ACCESS_SECRET);
-console.log("JWT_ACCESS_TTL:", process.env.JWT_ACCESS_TTL);
-console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
 
 const express = require("express");
 const cors = require("cors");
@@ -15,33 +12,40 @@ const taskRoutes = require("./routes/tasks");
 const app = express();
 app.use(helmet());
 
-const allowlist = [
-  process.env.FRONTEND_URL,
-  "https://v0-finalbur.vercel.app",  
-  "http://localhost:3000",
-].filter(Boolean);
+const allowlist = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
-console.log("CORS Allowlist:", allowlist);
+const vercelPrefix = (process.env.CORS_VERCEL_PREFIX || "").trim(); // e.g. https://v0-responsive-web-app-ui-
 
-app.use(cors({
-  origin: function (origin, callback) {
-    console.log("Request from origin:", origin);
-    
-    // Allow no origin (server-to-server, curl, Postman)
-    if (!origin) return callback(null, true);
-    
-    // Allow if in allowlist
-    if (allowlist.includes(origin)) return callback(null, true);
-    
-    // Allow all Vercel preview and production domains
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
-    
-    return callback(new Error("CORS blocked: " + origin));
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+
+  // Exact allowlist (recommended for production domains)
+  if (allowlist.includes(origin)) return true;
+
+  // Allow Vercel preview domains for this project (recommended for v0)
+  // Example: https://v0-responsive-web-app-ui-xxxx.vercel.app
+  if (vercelPrefix && origin.startsWith(vercelPrefix) && origin.endsWith(".vercel.app")) return true;
+
+  return false;
+}
+
+const corsOptions = {
+  origin(origin, cb) {
+    // IMPORTANT: do not throw an Error here (that becomes HTTP 500)
+    // Return false => no CORS headers, browser blocks, which is correct for disallowed origins
+    if (isAllowedOrigin(origin)) return cb(null, true);
+    return cb(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-}));
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -54,7 +58,6 @@ app.use("/admin", adminRoutes);
 app.use("/tasks", taskRoutes);
 app.use("/attendance", require("./routes/attendance"));
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error("ERROR:", err);
   res.status(err.statusCode || 500).json({
