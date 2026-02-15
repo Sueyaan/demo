@@ -49,6 +49,7 @@ enum Role {
   owner
   manager
   employee
+  admin
 }
 
 enum TaskStatus {
