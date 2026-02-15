@@ -1,4 +1,3 @@
-
 const router = require("express").Router();
 const { z } = require("zod");
 const prisma = require("../db/prisma");
@@ -36,6 +35,12 @@ router.get("/me", requireRole("employee"), async (req, res, next) => {
         createdAt: true,
         assignedById: true,
         assignedToId: true,
+        assignedTo: {
+          select: { id: true, name: true, email: true }
+        },
+        assignedBy: {
+          select: { id: true, name: true, email: true }
+        }
       },
     });
 
@@ -59,6 +64,12 @@ router.get("/", requireRole("owner", "manager"), async (req, res, next) => {
         createdAt: true,
         assignedById: true,
         assignedToId: true,
+        assignedTo: {
+          select: { id: true, name: true, email: true }
+        },
+        assignedBy: {
+          select: { id: true, name: true, email: true }
+        }
       },
     });
 
@@ -75,6 +86,22 @@ router.get("/by-employee/:employeeId", requireRole("owner", "manager"), async (r
     const tasks = await prisma.task.findMany({
       where: { assignedToId: employeeId },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        dueAt: true,
+        createdAt: true,
+        assignedById: true,
+        assignedToId: true,
+        assignedTo: {
+          select: { id: true, name: true, email: true }
+        },
+        assignedBy: {
+          select: { id: true, name: true, email: true }
+        }
+      },
     });
     return res.json({ tasks });
   } catch (err) {
@@ -129,6 +156,12 @@ router.post("/", requireRole("owner"), async (req, res, next) => {
         createdAt: true,
         assignedToId: true,
         assignedById: true,
+        assignedTo: {
+          select: { id: true, name: true, email: true }
+        },
+        assignedBy: {
+          select: { id: true, name: true, email: true }
+        }
       },
     });
 
@@ -182,6 +215,12 @@ router.patch("/:id/status", requireRole("owner", "employee"), async (req, res, n
         createdAt: true,
         assignedToId: true,
         assignedById: true,
+        assignedTo: {
+          select: { id: true, name: true, email: true }
+        },
+        assignedBy: {
+          select: { id: true, name: true, email: true }
+        }
       },
     });
 
