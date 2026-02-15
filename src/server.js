@@ -21,17 +21,23 @@ const allowlist = [
   "http://localhost:3000",
 ].filter(Boolean);
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowlist.includes(origin)) return callback(null, true);
-    return callback(new Error("CORS blocked: " + origin));
+const corsOptions = {
+  origin(origin, cb) {
+    
+    if (!origin) return cb(null, true);
+
+    if (allowlist.includes(origin)) return cb(null, true);
+
+    
+    return cb(new Error("CORS blocked: " + origin));
   },
   credentials: true,
-  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization"],
-}));
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -44,7 +50,12 @@ app.use("/tasks", taskRoutes);
 app.use("/attendance", require("./routes/attendance"));
 
 
-
+app.use((err, req, res, next) => {
+  if (err && typeof err.message === "string" && err.message.startsWith("CORS blocked:")) {
+    return res.status(403).json({ error: "cors_blocked", message: err.message });
+  }
+  return next(err);
+});
 
 
 app.use((err, req, res, next) => {
