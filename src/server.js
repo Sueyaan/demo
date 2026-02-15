@@ -17,6 +17,7 @@ app.use(helmet());
 
 const allowlist = [
   process.env.FRONTEND_URL,
+  "https://v0-finalbur.vercel.app",  
   "http://localhost:3000",
 ].filter(Boolean);
 
