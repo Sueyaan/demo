@@ -32,7 +32,7 @@ model Task {
   assignedById String
   assignedBy   User       @relation("assignedBy", fields: [assignedById], references: [id])
   assignedTo   User       @relation("assignedTo", fields: [assignedToId], references: [id])
-  updatedAt DateTime @updatedAt
+  
 }
 
 model Attendance {
