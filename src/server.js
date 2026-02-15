@@ -12,21 +12,21 @@ const taskRoutes = require("./routes/tasks");
 const app = express();
 app.use(helmet());
 
-const allowlist = (process.env.CORS_ORIGINS || "")
-  .split(",")
-  .map((s) => s.trim())
+const allowlist = [
+  process.env.FRONTEND_URL,          // production vercel domain
+  ...(process.env.CORS_ORIGINS || "").split(","),
+]
+  .map((s) => (s || "").trim())
   .filter(Boolean);
 
-const vercelPrefix = (process.env.CORS_VERCEL_PREFIX || "").trim(); // e.g. https://v0-responsive-web-app-ui-
+const vercelPrefix = (process.env.CORS_VERCEL_PREFIX || "").trim(); // e.g. https://v0-
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true;
-
-  // Exact allowlist (recommended for production domains)
+  if (!origin) return true; // curl/postman
   if (allowlist.includes(origin)) return true;
 
-  // Allow Vercel preview domains for this project (recommended for v0)
-  // Example: https://v0-responsive-web-app-ui-xxxx.vercel.app
+  // Allow Vercel preview domains for v0 projects
+  // Example: https://v0-something-<hash>.vercel.app
   if (vercelPrefix && origin.startsWith(vercelPrefix) && origin.endsWith(".vercel.app")) return true;
 
   return false;
@@ -34,8 +34,9 @@ function isAllowedOrigin(origin) {
 
 const corsOptions = {
   origin(origin, cb) {
-    // IMPORTANT: do not throw an Error here (that becomes HTTP 500)
-    // Return false => no CORS headers, browser blocks, which is correct for disallowed origins
+    // IMPORTANT: do NOT throw errors here
+    // If not allowed => cb(null, false) so no CORS headers are added
+    // Browser blocks, server does not 500.
     if (isAllowedOrigin(origin)) return cb(null, true);
     return cb(null, false);
   },
