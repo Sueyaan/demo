@@ -21,27 +21,32 @@ const allowlist = [
   "http://localhost:3000",
 ].filter(Boolean);
 
-const corsOptions = {
-  origin(origin, cb) {
-    
-    if (!origin) return cb(null, true);
+console.log("CORS Allowlist:", allowlist);
 
-    if (allowlist.includes(origin)) return cb(null, true);
-
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log("Request from origin:", origin);
     
-    return cb(new Error("CORS blocked: " + origin));
+    // Allow no origin (server-to-server, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    // Allow if in allowlist
+    if (allowlist.includes(origin)) return callback(null, true);
+    
+    // Allow all Vercel preview and production domains
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    
+    return callback(new Error("CORS blocked: " + origin));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-};
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan("dev"));
+
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.use("/auth", authRoutes);
@@ -49,15 +54,7 @@ app.use("/admin", adminRoutes);
 app.use("/tasks", taskRoutes);
 app.use("/attendance", require("./routes/attendance"));
 
-
-app.use((err, req, res, next) => {
-  if (err && typeof err.message === "string" && err.message.startsWith("CORS blocked:")) {
-    return res.status(403).json({ error: "cors_blocked", message: err.message });
-  }
-  return next(err);
-});
-
-
+// Error handler
 app.use((err, req, res, next) => {
   console.error("ERROR:", err);
   res.status(err.statusCode || 500).json({
