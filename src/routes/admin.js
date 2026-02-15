@@ -54,4 +54,31 @@ router.get("/employees", requireRole("owner", "manager"), async (req, res, next)
   }
 });
 
+router.get("/attendance", requireRole("owner", "manager"), async (req, res, next) => {
+  try {
+    const records = await prisma.attendance.findMany({
+      orderBy: { startTime: "desc" },
+      take: 200,
+      select: { 
+        id: true, 
+        userId: true, 
+        startTime: true, 
+        endTime: true, 
+        durationMinutes: true,
+        user: {
+          select: { 
+            id: true, 
+            name: true, 
+            email: true 
+          }
+        }
+      },
+    });
+
+    return res.json({ records });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = router;
