@@ -3,10 +3,11 @@ const bcrypt = require("bcrypt");
 const { z } = require("zod");
 const prisma = require("../db/prisma");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { sendWelcomeEmail } = require("../utils/email");
 
 router.use(requireAuth);
 
-// owner: write
+
 router.post("/employees", requireRole("owner"), async (req, res, next) => {
   try {
     const schema = z.object({
@@ -33,13 +34,18 @@ router.post("/employees", requireRole("owner"), async (req, res, next) => {
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 
+    
+    sendWelcomeEmail(created, body.password).catch(err =>
+      console.error('Welcome email failed:', err)
+    );
+
     return res.status(201).json(created);
   } catch (err) {
     return next(err);
   }
 });
 
-// owner + manager: read
+
 router.get("/employees", requireRole("owner", "manager"), async (req, res, next) => {
   try {
     const employees = await prisma.user.findMany({
@@ -53,6 +59,7 @@ router.get("/employees", requireRole("owner", "manager"), async (req, res, next)
     return next(err);
   }
 });
+
 
 router.get("/attendance", requireRole("owner", "manager"), async (req, res, next) => {
   try {

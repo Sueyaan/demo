@@ -2,20 +2,22 @@ const router = require("express").Router();
 const { z } = require("zod");
 const prisma = require("../db/prisma");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { sendTaskAssignedEmail, sendTaskStatusUpdateEmail } = require("../utils/email");
 
 router.use(requireAuth);
 
-router.get("/stats", requireRole("owner", "manager"), async (req, res, next) => {
-    try {
-        const total = await prisma.task.count();
-        const done = await prisma.task.count({ where: { status: "done" } });
-        const inProgress = await prisma.task.count({ where: { status: "in_progress" } });
-        const assigned = await prisma.task.count({ where: { status: "assigned" } });
 
-        return res.json({ total, done, inProgress, assigned });
-    } catch (err) {
-        return next(err);
-    }
+router.get("/stats", requireRole("owner", "manager"), async (req, res, next) => {
+  try {
+    const total = await prisma.task.count();
+    const done = await prisma.task.count({ where: { status: "done" } });
+    const inProgress = await prisma.task.count({ where: { status: "in_progress" } });
+    const assigned = await prisma.task.count({ where: { status: "assigned" } });
+
+    return res.json({ total, done, inProgress, assigned });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 
@@ -110,10 +112,6 @@ router.get("/by-employee/:employeeId", requireRole("owner", "manager"), async (r
 });
 
 
-
-
-
-
 router.post("/", requireRole("owner"), async (req, res, next) => {
   try {
     const schema = z.object({
@@ -126,9 +124,10 @@ router.post("/", requireRole("owner"), async (req, res, next) => {
     const body = schema.parse(req.body);
     const assignedById = req.user.sub;
 
+    
     const assignedTo = await prisma.user.findUnique({
       where: { id: body.assignedToId },
-      select: { id: true, role: true, status: true },
+      select: { id: true, name: true, email: true, role: true, status: true },
     });
 
     if (!assignedTo || assignedTo.status !== "active") {
@@ -138,6 +137,13 @@ router.post("/", requireRole("owner"), async (req, res, next) => {
       return res.status(400).json({ error: "assignedTo_must_be_employee" });
     }
 
+    
+    const assignedBy = await prisma.user.findUnique({
+      where: { id: assignedById },
+      select: { id: true, name: true, email: true },
+    });
+
+    
     const task = await prisma.task.create({
       data: {
         title: body.title,
@@ -165,15 +171,16 @@ router.post("/", requireRole("owner"), async (req, res, next) => {
       },
     });
 
+   
+    sendTaskAssignedEmail(assignedTo, task, assignedBy).catch(err => 
+      console.error('Email notification failed:', err)
+    );
+
     return res.status(201).json(task);
   } catch (err) {
     return next(err);
   }
 });
-
-
-
-
 
 
 router.patch("/:id/status", requireRole("owner", "employee"), async (req, res, next) => {
@@ -186,9 +193,16 @@ router.patch("/:id/status", requireRole("owner", "employee"), async (req, res, n
     const { id } = paramsSchema.parse(req.params);
     const { status } = bodySchema.parse(req.body);
 
+   
     const task = await prisma.task.findUnique({
       where: { id },
-      select: { id: true, assignedToId: true, status: true },
+      select: { 
+        id: true, 
+        assignedToId: true, 
+        assignedById: true,
+        status: true,
+        title: true,
+      },
     });
 
     if (!task) return res.status(404).json({ error: "task_not_found" });
@@ -196,13 +210,17 @@ router.patch("/:id/status", requireRole("owner", "employee"), async (req, res, n
     const isOwner = req.user.role === "owner";
     const isAssignee = task.assignedToId === req.user.sub;
 
-    if (!isOwner && !isAssignee) return res.status(403).json({ error: "forbidden" });
+    if (!isOwner && !isAssignee) {
+      return res.status(403).json({ error: "forbidden" });
+    }
 
+    
     const order = { assigned: 1, in_progress: 2, done: 3 };
     if (!isOwner && order[status] < order[task.status]) {
       return res.status(400).json({ error: "invalid_status_transition" });
     }
 
+    
     const updated = await prisma.task.update({ 
       where: { id },
       data: { status },
@@ -223,6 +241,17 @@ router.patch("/:id/status", requireRole("owner", "employee"), async (req, res, n
         }
       },
     });
+
+    
+    const updatedBy = await prisma.user.findUnique({
+      where: { id: req.user.sub },
+      select: { name: true, email: true }
+    });
+
+   
+    sendTaskStatusUpdateEmail(updated, updatedBy, status).catch(err =>
+      console.error('Email notification failed:', err)
+    );
 
     return res.json(updated);
   } catch (err) {
